@@ -1,0 +1,19 @@
+{
+  "dimension_names": [
+    "Sido",
+    "Sigungu",
+    "Age_Group",
+    "Gender",
+    "Marital_Status",
+    "Income_Quintile",
+    "total"
+  ],
+  "dimension_counts": {
+    "Sido": 19,
+    "Sigungu": 30,
+    "Age_Group": 25,
+    "Gender": 2,
+    "Marital_Status": 4,
+    "Income_Quintile": 5
+  }
+}

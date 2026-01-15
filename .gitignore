@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data files (큰 파일들은 제외하거나 Git LFS 사용)
+*.csv
+*.pkl
+*.json
+!requirements.txt
+!dimension_info.json
+!all_dimension_values.json
+!all_dimension_values.txt
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
