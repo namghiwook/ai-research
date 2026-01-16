@@ -1,0 +1,549 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko"><head>
+		
+		<script type="text/javascript" src="ext/js/jquery/jquery-1.9.1.js"></script>	
+		<link rel="stylesheet" href="/statHtml/ext/css/jquery/jquery.treeview.css?v=20220324">		
+		
+		<script type="text/javascript" src="/statHtml/ext/js/jquery/jquery.treeview.js?v=20220324"></script>
+		<script type="text/javascript" src="/statHtml/ext/js/tree/kosisDbCommon.js?v=20231019"></script>
+		<script type="text/javascript" src="/statHtml/ext/js/tree/kosisDbCookie.js?v=20250724"></script>
+		<script type="text/javascript" src="/statHtml/ext/js/tree/kosisDbScrap.js?v=20220324"></script>
+		<script type="text/javascript" src="/statHtml/ext/js/tree/kosisDbLeft.js?v=20231030"></script>
+		<link rel="stylesheet" href="ext/css/newKosis/leftTree.css?v=211126">
+		<!-- Fancy Tree, Multiselect -->
+		<link rel="stylesheet" href="ext/css/common/jquery.multiselect.css">
+		<link rel="stylesheet" href="ext/css/skin-win8/ui.fancytree.css">
+		<script type="text/javascript" src="ext/js/jquery/jquery-ui.min.js"></script>
+		<script type="text/javascript" src="ext/js/jquery/jquery.multiselect.js"></script>
+		<script type="text/javascript" src="ext/js/jquery/jquery.fancytree-all.min.js"></script>
+		
+		
+			
+			
+				<link type="text/css" rel="stylesheet" href="ext/css/common/base.css?v=20220324">
+				<link type="text/css" rel="stylesheet" href="ext/css/common/popup.css?v=20220324">
+			
+		
+
+		<link rel="stylesheet" href="ext/css/common/design.css?v=20220324">
+	    <link rel="stylesheet" href="ext/css/common/font.css?v=20220324">
+	    <link rel="stylesheet" href="ext/css/common/ui.tree.css?v=20220324">
+		
+		<title>KOSIS</title>
+		<style>
+			#scrapImg {background: url('/statHtml/ext/css/common/images/building.gif') 0px 0px no-repeat; position: absolute;bottom: 0px;width: 100%;height: 133px}
+			span.fancytree-ico-e span.fancytree-icon {background: url('/statHtml/images/tree/icon_file.png') 7px 2px no-repeat; }
+			span.fancytree-ico-e span.fancytree-icon:hover {background-position: 7px 2px}
+		</style>
+		
+		<script>		
+			const content = "/statHtml/";
+			const language = "ko";									//영문구분
+			const cookieListText = "내가 본 통계표 리스트가 없습니다.";	//내가 본 통계표 리스트가 없습니다.
+			const hostName = location.host.replace('mgmk.','');
+			
+			var orderBy = "";
+			//출력할 메세지 목록
+			const message = {
+					"NotSessionLogIn" 	: '로그인이 필요합니다. 로그인 후 재접속하시겠습니까?', 		 	//로그인 후 사용하실 수 있습니다.
+					"NotHref" 			: '잘못된 URL 입니다.',					 	//잘못된 URL 입니다.
+					"NotKeyword" 		: '찾을 단어를 입력해 주세요.',	 	//찾을 단어를 입력해 주세요.
+					"Error" 			: '에러가 발생했습니다!',		  	//오류가 발생했습니다.
+					"NotServerType" 	: '현재 사용 할 수 없는 기능입니다.',  	//현재 사용 할 수 없는 기능입니다.
+					"NotConnStat"		: "해당 목록에 연결된 통계표가 없습니다."
+			} ;
+			
+			parent.fn_initRightFrame();
+			
+			$(document).ready(function() {
+				//부모에서 vwCd정보가져와서 세팅. 없을시 default 주제별 세팅
+				vwCd = "MT_ZTITLE";	
+				(vwCd == "")? checkReadySet = 1: checkReadySet = 0;
+				
+					if(orderBy == 'ASC'){
+						$("#leftTreeForm_orderBy").val('ASC');
+					}
+					fn_srvcVw();
+					if(language === "en"){
+						$(".MyViewTblDiv").css("height","680px");
+						$(".left_layout .myscrap > button.scrap").css("width","93px").css("background-position","57px -1px");;
+						$(".left_layout .myscrap > button.scrap:hover").css("background-position","57px -1px");
+					}
+					// 트리 최하위 laypopup 클릭이벤트
+					$(document).on("click", "[id='btn-layPopup']", function() {
+						
+						var param = $(this).attr('param');
+						var orgId = param.split(",")[0];
+						var tblId = param.split(",")[1];
+						$("#statisticsGubun").val(param.split(",")[2]); // 파일통계표, 일반통계표 구분
+						
+						$.ajax({
+							url : "/statHtml/stat/view/selectStatsInfo.do",
+							type : "POST",
+							data: {orgId : orgId, tblId : tblId },
+							dataType:"json",
+							async: false,
+							success : function(data) {
+					      		if(data != null && data != "") {
+					      			$("#tblNm").val(data.tblInfo[0].tblNm);
+					      			$("#prdInfo").val(data.tblInfo[0].prdInfo);
+					      			$("#statNm").val(data.tblInfo[0].statNm);
+					      			
+					      			if(data.tblJusuk[0] != null) {
+					      				var cmmtDc = "";
+					      				for(var i=0; i<data.tblJusuk.length; i++){
+					      					cmmtDc += data.tblJusuk[i].cmmtDc;
+					      					cmmtDc += '<br/>';
+					      				}
+					      				$("#cmmtDc").val(cmmtDc);
+					      			} else {
+					      				$("#cmmtDc").val("");
+					      			}
+					      			$("#sendDe").val(data.tblInfo[0].sendDe);
+					      			
+					      			// 분류 및 항목 list 갯수만큼 붙인다..
+					      			var tblItem = "";
+					      			for(var i=0; i < data.tblItem.length; i++) {
+					      				tblItem += '<img src ="images/cmmn/btn_page_next1.gif"/ alt="Next Page">&nbsp;';
+					      				tblItem += data.tblItem[i].clNm;
+					      				tblItem += '<br/>&nbsp;&nbsp;';
+					      				tblItem += data.tblItem[i].itmNm;
+					      				tblItem += '<br/>';
+					      			}
+					      			$("#tblItem").val(tblItem);
+						      	};
+							},
+							error : function() {
+					        	return false;
+					    	}
+						});			
+					
+					var $href = $(this).attr('href');
+					
+					// ie9경우 layer popup 호출문자 #앞에 url이 붙는 경우가있어서 #앞에 문자열 자른다.......
+					$href = $href.substring($href.indexOf("#"),$href.length);
+				    parent.layer_popup($href, 'juje');
+				});	
+			
+		});
+		function setListId(listId){
+			$("#leftTreeForm_listId").val(listId);
+		}
+		//초기 Tree 목록 생성
+		function fnMakeLeftTree(init){	
+			var f_orgId = "";
+			var f_tblId = "";
+			var f_tblNm = "";
+			var f_vwCd = "";
+			var f_listId = "";
+			const $form_org = $("#leftTreeForm_orgId");
+			const $form_tbl = $("#leftTreeForm_tblId");
+			const $form_vw_cd = $("#leftTreeForm_vwCd");
+			
+			if(checkOrderBy == 0){
+				if(treSe == 0){ //정렬버튼을 누르지않았을 때
+					$form_tbl.val("DT_1BPA002");
+					$form_org.val("101");
+				} else {
+					treSe = 0;
+				};
+			}
+			
+			//정렬버튼을 구분 초기화
+			if(checkOrderBy != 0){ 
+				checkOrderBy = 0;
+			}
+			
+			$.ajax({
+				dataType : 'json',
+				type : 'POST',
+				url : content + "makeTreeData.do",
+				data : $("#leftTreeForm").serialize(),	
+				success : function(data){
+					$("#leftTreeForm_listId").val("");
+					$("#treeList ul.treeview li").html(data.makeHtml);
+					fnTreeViewRefresh();
+					
+					//첫화면(statHtml.do)으로/로 들어왔을 경우 조회된 통계표를 트리에서 찾는다.
+					if(checkReadySet == 0){
+						try{
+							for(var i = 0; i < data.viewStatPath.length; i++){
+								//변수값을 셋팅해준다.
+								f_orgId = data.viewStatPath[i].orgId;	//기관ID
+								f_tblId = data.viewStatPath[i].listId;	//통계표ID
+								f_tblNm = data.viewStatPath[i].listNm;	//통계표이름
+								f_vwCd  = data.viewStatPath[i].vwCd;	//통계목록
+								f_listId = data.viewStatPath[i].upListId;
+
+								//반복문 마지막일 시 통계표를 체크한다. 
+								if(i == data.viewStatPath.length-1){	
+									if(checkReady == 1){ if(init == null) loadding("setting"); } else {checkReady = 1;};
+									
+									
+										//현제 값들을 내가 본 통계에 저장한다.
+										if(order_btn_loadding != 1){
+											fnKosisMyViewStatisTable(f_orgId, f_tblId, f_tblNm, checkCn);
+										}
+									
+									
+						       		if(order_btn_loadding == 1){
+					       				if(order_btn_Stat == 1){
+					       					order_btn_Stat = 0;
+					       					treeDownList(f_tblId + "," + f_vwCd + "," + (i + 1));
+					       					treeStatListColor(f_tblId);
+					       					fn_treeScroller(f_tblId+"@@"+f_listId);
+					       					if(init == null) loadding("setting");
+					       				} else {
+					       					
+					       					fn_treeScroller("treeDown_" + f_tblId+"@@"+f_listId);
+					       					treeColor(f_tblId+"@@"+f_listId);
+					       					if(init == null) loadding("setting");
+					       				}
+					       				order_btn_loadding = 0;
+						       		} else {
+						       			if(f_vwCd == "MT_GTITLE02"){
+				       						fn_treeScroller("treeDown_" + f_tblId + "_" + f_listId+"@@"+f_listId);
+				       						treeColor(f_tblId + "_" + f_listId + "@@" + f_listId);
+				       					} else {
+				       						fn_treeScroller("treeDown_" + f_tblId+"@@"+f_listId);
+				       						treeColor(f_tblId+"@@"+f_listId);
+				       					}
+						       			if(init == null) loadding("setting");
+						       		};
+									break;
+								}
+								
+								treeDownList(f_tblId + "," + f_vwCd + "," + (i + 1));
+								tblStatNm = { listId : "" , vwCd : "" };
+							}
+							checkReadySet = 1;
+						} catch (e) {
+							if(order_btn_loadding == 1){
+								if(init == null) loadding("setting");
+			       				order_btn_loadding = 0;
+			       			};
+							checkReadySet = 1;
+							return false;
+						};
+					} else {
+						if(init == null) loadding("setting");
+					}
+					return data.viewStatPath;
+				},
+				error : function(error){
+					fn_msg("Error");
+				}
+			});
+			
+		}
+
+	    // 통계표 조회 : 프레임 구분후 수정
+	    function showStats(orgId, tblId, tblSe, parentId, vwCd, itmId, scrId, tblnm) {
+	    	var uri;	    
+	    	var connPath = parent.g_connPath;
+	       	loadding("loading");
+	       	if(tblnm == null || tblnm == undefined) {
+	       		tblnm = "";
+	       	}
+	       	
+    		if(itmId == "" || itmId == null){
+    			treeColor(tblId+"@@"+parentId);
+    		} else {
+    			treeColor(tblId + "_" + parentId+"@@"+parentId);
+    		}
+	    	
+	    	checkSelectTbl = 1;
+	    	tblStatNm.listId = ""; 
+	    	tblStatNm.vwCd = "";
+	    	
+	    	var param = { tblId : tblId, orgId : orgId, listId:parentId, itmId : itmId, vwCd  : vwCd };
+	    	
+	    	//이미 열려있는 통계표 시 확인 후 함수를 종료한다.
+	    	if((scrId == undefined || scrId == "" || scrId == null) && parent.fn_tabSelectedNot(param)){
+	    		if(itmId == "" || itmId == null){
+	    			treeColor(tblId+"@@"+parentId);
+	    		} else {
+	    			treeColor(tblId + "_" + parentId+"@@"+parentId);
+	    		}
+	    		return;
+	    	};
+			
+	    	//기관ID 또는 통계표ID가 없을 경우 리턴시킴
+	    	if (orgId == "" || tblId == "") {
+	    		loadding("setting");
+	       		return;
+	       	};      
+	       	if(tblnm == "") {
+	       		if(vwCd == "MT_GTITLE02"){
+		       		tblnm = $("#treeDown_" + tblId + "_" + parentId).children('a').children('span').attr("title");
+		       	} else {
+		       		tblnm = $("#treeDown_" + tblId).children('a').children('span').attr("title");
+		       	}
+	       	}
+	       	temTblNm = tblnm;
+	       	
+	       	//파일통계표를 구분합니다.
+	       	if(tblSe == 'F') {
+	       		
+	       		
+	       			
+	       				fnKosisMyViewStatisTable(orgId, tblId, tblnm, checkCn);
+						//외부망반영시
+						if(hostName == "kosis.kr") {
+	       					uri	= "https://stat.kosis.kr/nsibsHtmlSvc/fileView/FileStbl/fileStblView.do" + "?in_org_id=" + orgId + "&in_tbl_id=" + tblId;// 기존uri 파일다운로드
+						}else{
+		       				uri	= "https://nsist.nsi.go.kr/nsibsHtml/fileView/FileStbl/fileStblView.do" + "?in_org_id=" + orgId + "&in_tbl_id=" + tblId + "&fileSvc=Y" + "&tab_yn=N&conn_path=ZA"; 
+						}
+					
+	       			
+	       			
+	       		
+	       		 var newWin = window.open(uri, "파일통계표", "width=1000,height=950");
+	       		newWin.focus();
+	       		loadding("setting");
+	       		return; 
+	       	} else {
+	       		
+       				
+	       				//파일통계표는 쿠키값으로 열 수가 없음. 기존 DB도 그걸 구분하는 값이 없어서 파일통계표 볼때는 필요가 없음.
+// 			       		if(scrId == null){
+		       				fnKosisMyViewStatisTable(orgId, tblId, tblnm, checkCn);
+// 			       		};
+       				
+       				
+       			
+       			if(itmId == "" || itmId == null){
+       				if(vwCd != '-'){
+           				fn_treeScroller("treeDown_" + tblId+"@@"+parentId);
+    				}
+       				if(connPath == ""){
+		       				var url = "https://kosis.kr";
+		       				if(url.indexOf("kosis.kr") > -1){
+		       					parent.iframe_rightMenu.tabControll(orgId, tblId, '2', 'Z1', parentId, vwCd, scrId);
+		       				}else{
+			       				parent.iframe_rightMenu.tabControll(orgId, tblId, '2', 'ZA', parentId, vwCd, scrId);
+		       				}
+       				}else{
+       					parent.iframe_rightMenu.tabControll(orgId, tblId, '2', connPath, parentId, vwCd, scrId);
+       				}
+		       	} else {
+					fn_treeScroller("treeDown_" + tblId + "_" + parentId+"@@"+parentId);
+					if(connPath == ""){
+		       				var url = "https://kosis.kr";
+		       				if(url.indexOf("kosis.kr") > -1){
+		       					parent.iframe_rightMenu.tabControll(orgId, tblId, '2', 'Z1', parentId, vwCd, scrId, itmId);
+		       				}else{
+			       				parent.iframe_rightMenu.tabControll(orgId, tblId, '2', 'ZA', parentId, vwCd, scrId, itmId);
+		       				}
+					}else{
+	       				parent.iframe_rightMenu.tabControll(orgId, tblId, '2', connPath, parentId, vwCd, scrId, itmId);
+					}
+		       	};
+	       	};
+	    }
+		
+		//트리 맨위로 
+		function fn_goTop(){
+			$("#treeList").scrollTop(0);
+			$("#treeList").scrollLeft(0);
+		}
+	    
+	   //탭 선택시 트리에서 통계표 찾기
+		function fn_tapSelectTree(param) {
+			loadding("loading");
+
+			
+			//form 데이타 기입
+			treeTblPath.vwCd.value = param.vwCd;
+			treeTblPath.tblId.value = param.tblId;
+			treeTblPath.orgId.value = param.orgId;
+			treeTblPath.listId.value = param.listId;
+			treeTblPath.itm_id.value = param.itm_id;
+
+			if(param.vwCd == "" || param.vwCd == null || param.vwCd == undefined){
+				return;
+			} else if($("#select1").val() != param.vwCd){
+			
+				checkReadySet = 0;
+				treSe = 1;
+				
+				leftTreeForm.vwCd.value = param.vwCd;
+				leftTreeForm.tblId.value =param.tblId;
+				leftTreeForm.orgId.value = param.orgId;
+				leftTreeForm.itm_id.value = param.itm_id;
+				
+				$("#select1").val(param.vwCd).attr("selected", "selected");
+				itemChange1();
+			} else {
+					fn_tapSelectTree_Ajax();
+				
+			}
+			
+		};
+		
+		//스크랩 조회 기능
+		var btn_scrap = function(){
+			loadding("loading");
+			//서버 타입이 호스팅 혹은 업무망일시 작동되지 않습니다.
+			
+			
+				if(checkCn == "N"){
+					if(confirm(message["NotSessionLogIn"])) {
+						//window.open("https://kosis.kr/index/index.do");
+						//window.open("https://kosis.kr/oneid/cmmn/login/LoginView.do");
+						 var url = "https://kosis.kr/statHtml/login.do";
+						parent.document.form_join.CUR_URL.value = "https://kosis.kr/statHtml/statHtml.do?orgId=101&tblId=DT_1BPA002&language=&pub=&conn_path=&list_id=&vw_cd=MT_ZTITLE&itm_id=&dbUser=&mode=";
+						parent.document.form_join.SYS_URL.value = url;
+						parent.document.form_join.submit();
+						
+					}
+					if($("#MyStatScrap").css("display") == "block") {
+						MyViewTbl('none');
+					}
+					loadding("setting");
+					return;
+				} else if(checkCn == "Y" && language == "en"){
+					fn_msg("NotServerType");
+					return;
+				}
+				
+			
+			loadding("setting");
+		};
+		
+		//서버 구분해서 통계목록 조회
+		var fn_srvcVw = function(){
+			
+				
+				fn_srvcVw_NSI();
+			
+			
+			fnTreeViewRefresh();
+		};
+		
+		</script>
+	</head>
+	<body style="width:100%;height: 100vh;" id="leftMain"><!-- overflow 추가 -->
+		
+		<form name="leftTreeForm" id="leftTreeForm" method="post" onsubmit="return false">
+			<!-- <input type="hidden" id="leftTreeForm_vwCd" name="vwCd" value="MT_GTITLE01" /> -->  <!-- e-지방지표(주제별) -->
+			<!-- <input type="hidden" id="leftTreeForm_listId" name="listId" value="101" /> -->  <!-- e-지방지표(주제별) -->
+			<input type="hidden" id="leftTreeForm_lev" name="lev" value="1"> 						
+			<input type="hidden" id="leftTreeForm_vwCd" name="vwCd" value="MT_ZTITLE"> 
+			<input type="hidden" id="leftTreeForm_tblId" name="tblId" value="DT_1BPA002"> 
+			<input type="hidden" id="leftTreeForm_orgId" name="orgId" value="101"> 
+			<input type="hidden" id="leftTreeForm_dbUser" name="dbUser" value="NSI."> 
+			<input type="hidden" id="leftTreeForm_listId" name="listId" value=""> 
+			<input type="hidden" id="leftTreeForm_itmId" name="itm_id" value=""> 
+			<input type="hidden" id="leftTreeForm_orderBy" name="orderBy" value=""> 
+			<input type="hidden" name="language" value="ko"> 
+			<input type="hidden" id="serverType" name="serverType" value="NSI">
+		</form>
+		<form name="treeTblPath" id="treeTblPath" method="post" onsubmit="return false">
+			<input type="hidden" id="treeTblPath_vwCd" name="vwCd" value=""> 
+			<input type="hidden" id="treeTblPath_tblId" name="tblId" value=""> 
+			<input type="hidden" id="treeTblPath_orgId" name="orgId" value=""> 
+			<input type="hidden" id="treeTblPath_listId" name="listId" value=""> 
+			<input type="hidden" id="treeTblPath_itmId" name="itm_id" value=""> 
+			<input type="hidden" id="treeTblPath_dbUser" name="dbUser" value="NSI."> 
+			<input type="hidden" name="language" value="ko"> 
+		</form>
+		<form name="treeSearch" id="treeSearch" method="post" onsubmit="return false">
+			<input type="hidden" id="treeSeachOption" name="treeSearchOption" value=""> 
+			<input type="hidden" id="treeSeachKeyword" name="treeSearchKeyword" value=""> 
+			<input type="hidden" id="treeSeachKeywordVwCd" name="vwCd" value=""> 
+			<input type="hidden" id="treeSeachKeywordDbUser" name="dbUser" value="NSI."> 
+			<input type="hidden" id="treePageStart" name="pageStart" value="0"> 
+			<input type="hidden" id="treePageNow" name="pageNow" value="1"> 
+			<input type="hidden" id="treePageEnd" name="pageEnd" value="25"> 
+			<input type="hidden" name="language" value="ko"> 
+		</form>
+		<form id="searchForm" name="searchForm" action="/statHtml/includeLeftTree.do" method="post" onsubmit="return false">
+			<input type="hidden" id="tblNm" name="tblNm" value=""> 
+			<input type="hidden" id="prdInfo" name="prdInfo" value=""> 
+			<input type="hidden" id="tblItem" name="tblItem" value=""> 
+			<input type="hidden" id="statNm" name="statNm" value=""> 
+			<input type="hidden" id="cmmtDc" name="cmmtDc" value=""> 
+			<input type="hidden" id="sendDe" name="sendDe" value=""> 
+			<input type="hidden" name="searchGubun" id="searchGubun" value=""> 
+			<input type="hidden" name="statisticsGubun" id="statisticsGubun" value=""> 
+			<input type="hidden" id="listNmPath" name="listNmPath" value=""> 
+
+			<input type="hidden" id="meta0" name="meta0" value=""> 
+			<input type="hidden" id="meta1" name="meta1" value=""> 
+			<input type="hidden" id="meta2" name="meta2" value=""> 
+			<input type="hidden" id="meta3" name="meta3" value=""> 
+			<input type="hidden" id="meta4" name="meta4" value=""> 
+			<input type="hidden" id="meta5" name="meta5" value=""> 
+			<input type="hidden" id="meta6" name="meta6" value=""> 
+			<input type="hidden" id="meta7" name="meta7" value=""> 
+			<input type="hidden" id="meta8" name="meta8" value=""> 
+			<input type="hidden" id="meta9" name="meta9" value=""> 
+	
+		</form>
+		<div class="left_layout" style="height:100%; width:100%">
+			<div class="head" style="display: flex; justify-content: center; align-items: center;">
+				<span>
+					통계목록 :
+				</span>
+				<label for="select1" style="display: none;" title="통계목록">
+					통계목록
+				</label>
+				<select name="select1" id="select1" title="통계목록" onchange="itemChange1()">							
+				<option value="MT_ZTITLE" title="주제별 통계">주제별 통계</option><option value="MT_OTITLE" title="기관별 통계">기관별 통계</option><option value="MT_GTITLE01" title="e-지방지표(주제별)">e-지방지표(주제별)</option><option value="MT_GTITLE02" title="e-지방지표(지역별)">e-지방지표(지역별)</option><option value="MT_CHOSUN_TITLE" title="과거-광복이전">과거-광복이전</option><option value="MT_HANKUK_TITLE" title="과거-통계연감">과거-통계연감</option><option value="MT_STOP_TITLE" title="중지통계">중지통계</option><option value="MT_RTITLE" title="국제통계">국제통계</option><option value="MT_RTITLE01" title="국제지역통계">국제지역통계</option><option value="MT_BUKHAN" title="북한통계">북한통계</option></select>
+			</div>
+			
+				<div class="myscrap">
+					
+						<button id="ico_myscarp" type="button" class="scrap btn_scrap" onclick="btn_scrap()" title="스크랩">스크랩</button>
+		           	
+				    
+	               		
+	               			<button type="button" class="view" id="MyViewTbl" onclick="MyViewTbl('View')" title="내가 본 통계표">내가 본 통계표</button>
+	               		
+	               		
+	               
+	            </div>
+			
+		<!-- 1.분류선택 -->
+		<div class="select_area" style="margin: 10px 10px 3px; display: flex;">
+			<label for="seachOption" style="display: none;" title="Search Keyword Option">Search Keyword Option</label>
+			<select style="width:80px;" id="seachOption" title="Search Keyword Option">
+				<option value="statList" title="통계목록">통계목록</option>
+				<option value="statTblNm" title="통계표">통계표</option>
+			</select>
+			<span>
+				<input type="text" id="treeSearchKeyword" onkeypress="if(event.keyCode == 13){fn_treeSearch(1)}" placeholder="단어검색" title="단어검색">
+			</span>
+			<button type="button" class="btn_navy" style="width:60px;padding:0px" onclick="fn_treeSearch(1)" title="검색">검색</button>
+		</div>
+			<div class="selectbox" style="padding: 0px 10px 0px 9px; height: 23px; display: block;">
+				<button type="button" id="goTopBtn" class="btn_green" onclick="fn_goTop();">
+				맨위로
+				</button>
+	            <span class="align_area">
+                    <button id="btn_asc" type="button" class="btn_txt_up" onclick="fn_btn_order('ASC')" title="오름차순" value="asc">오름차순</button>
+                    <button id="btn_desc" type="button" class="btn_txt_down" onclick="fn_btn_order('DESC')" title="내림차순" value="desc" style="display:none;">내림차순</button>
+                </span>
+			</div>	
+		
+		
+		<form id="listForm" name="listForm" style="height: calc(100% - 157px); display: block;" action="/statHtml/includeLeftTree.do" method="post">
+			<input type="hidden" name="pageUnit" id="pageUnit" value="">
+			<input type="hidden" name="pageSize" id="pageSize" value="">
+			<input type="hidden" name="recordCountPerPage" id="recordCountPerPage" value="">
+			<input type="hidden" name="searchKeyword" id="searchKeyword" value="">
+			<input type="hidden" name="searchGubun1" id="searchGubun1" value=""> <!-- paging 구분 -->
+			<input type="hidden" name="language" value="ko">
+			<div class="status_text"></div>
+			
+			
+			<div id="treeList" class="list_box" style="padding: 3px; height: 100%; overflow: auto; display: block;">
+				<b id="title">
+				</b>
+				<ul id="tree" class="treeview">
+					<li class="last">
+						<li id="A,MT_ZTITLE,1" name="A" class="collapsable"><div id="div_A" class="hitarea collapsable-hitarea"></div><img id="img_A" onclick="treeDownList('A,MT_ZTITLE,1')" src="images/tree/collapsable-last.gif" alt="인구" style="cursor: pointer;"><a href="javascript:treeDownList('A,MT_ZTITLE,1')"> <span title="인구" style="">인구</span> </a><input type="hidden" name="up_list_id" value="A"><input type="hidden" name="menu_level" value="1"><ul id="ul_A" style="display: block;"><li id="A_4" class="collapsable"><a href="javascript:treeDownList(&quot;A_4,MT_ZTITLE,2&quot;)"><img id="img_A_4" src="images/tree/collapsable-last.gif" alt="인구총조사"> <div id="div_A_4" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A_4,MT_ZTITLE,2&quot;)"><span title="인구총조사" style="">인구총조사 </span></a><input type="hidden" name="up_list_id" value="A"><input type="hidden" name="menu_level" value="2"><ul id="ul_A_4" style="display: block;"><li id="A11" class="collapsable"><a href="javascript:treeDownList(&quot;A11,MT_ZTITLE,3&quot;)"><img id="img_A11" src="images/tree/collapsable-last.gif" alt="인구부문"> <div id="div_A11" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11,MT_ZTITLE,3&quot;)"><span title="인구부문" style="">인구부문 </span></a><input type="hidden" name="up_list_id" value="A_4"><input type="hidden" name="menu_level" value="3"><ul id="ul_A11" style="display: block;"><li id="A11_2015_1" class="collapsable"><a href="javascript:treeDownList(&quot;A11_2015_1,MT_ZTITLE,4&quot;)"><img id="img_A11_2015_1" src="images/tree/collapsable-last.gif" alt="총조사인구(2015년 이후)"> <div id="div_A11_2015_1" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1,MT_ZTITLE,4&quot;)"><span title="총조사인구(2015년 이후)" style="">총조사인구(2015년 이후) </span></a><input type="hidden" name="up_list_id" value="A11"><input type="hidden" name="menu_level" value="4"><ul id="ul_A11_2015_1" style="display: block;"><li id="A11_2015_1_10" class="collapsable"><a href="javascript:treeDownList(&quot;A11_2015_1_10,MT_ZTITLE,5&quot;)"><img id="img_A11_2015_1_10" src="images/tree/collapsable-last.gif" alt="전수부문 (등록센서스, 2015년 이후)"> <div id="div_A11_2015_1_10" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10,MT_ZTITLE,5&quot;)"><span title="전수부문 (등록센서스, 2015년 이후)" style="">전수부문 (등록센서스, 2015년 이후) </span></a><input type="hidden" name="up_list_id" value="A11_2015_1"><input type="hidden" name="menu_level" value="5"><ul id="ul_A11_2015_1_10" style="display: block;"><li id="A11_2015_1_10_10" class="collapsable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_10,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_10" src="images/tree/collapsable-last.gif" alt="전수기본표"> <div id="div_A11_2015_1_10_10" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_10,MT_ZTITLE,6&quot;)"><span title="전수기본표" style="">전수기본표 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_10" style="display: block;"><li id="treeDown_DT_1IN1502" style="background-color: rgb(216, 236, 241); width: 466px;"><img src="images/tree/icon_file.png" alt="인구, 가구 및 주택 – 읍면동(연도 끝자리 0, 5), 시군구(그 외 연도)"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1IN1502&quot;,&quot;N&quot;,&quot;A11_2015_1_10_10&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="인구, 가구 및 주택 – 읍면동(연도 끝자리 0, 5), 시군구(그 외 연도)" style="background-color: rgb(216, 236, 241);">인구, 가구 및 주택 – 읍면동(연도 끝자리 0, 5), 시군구(그 외 연도) (년 2015~2024) </span></a></li><li id="treeDown_DT_1IN1503"><img src="images/tree/icon_file.png" alt="연령 및 성별 인구 – 읍면동"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1IN1503&quot;,&quot;N&quot;,&quot;A11_2015_1_10_10&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="연령 및 성별 인구 – 읍면동">연령 및 성별 인구 – 읍면동 (년 2015~2024) </span></a></li><li id="treeDown_DT_1IN2030"><img src="images/tree/icon_file.png" alt="주요 인구지표(부양비, 노령화지수, 중위연령 등) - 시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1IN2030&quot;,&quot;N&quot;,&quot;A11_2015_1_10_10&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="주요 인구지표(부양비, 노령화지수, 중위연령 등) - 시군구">주요 인구지표(부양비, 노령화지수, 중위연령 등) - 시군구 (년 2015~2024) </span></a></li><li id="treeDown_DT_1IN1507"><img src="images/tree/icon_file.png" alt="성, 연령 및 가구주와의 관계별 인구 - 시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1IN1507&quot;,&quot;N&quot;,&quot;A11_2015_1_10_10&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성, 연령 및 가구주와의 관계별 인구 - 시군구">성, 연령 및 가구주와의 관계별 인구 - 시군구 (년 2015~2024) </span></a></li><li id="treeDown_DT_1IN1509"><img src="images/tree/icon_file.png" alt="성, 연령 및 세대구성별 인구 - 시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1IN1509&quot;,&quot;N&quot;,&quot;A11_2015_1_10_10&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성, 연령 및 세대구성별 인구 - 시군구">성, 연령 및 세대구성별 인구 - 시군구 (년 2015~2024) </span></a></li><li id="treeDown_DT_1MR2060" class="last"><img src="images/tree/icon_file.png" alt="성, 연령 및 혼인상태별 인구 - 시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1MR2060&quot;,&quot;N&quot;,&quot;A11_2015_1_10_10&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성, 연령 및 혼인상태별 인구 - 시군구">성, 연령 및 혼인상태별 인구 - 시군구 (년 2022~2024) </span></a></li></ul></li><li id="A11_2015_1_10_20" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_20,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_20" src="images/tree/expandable-last.gif" alt="외국인"> <div id="div_A11_2015_1_10_20" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_20,MT_ZTITLE,6&quot;)"><span title="외국인">외국인 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_20" style="display: block;"></ul></li><li id="A11_2015_1_10_003" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_003,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_003" src="images/tree/expandable-last.gif" alt="이주배경인구"> <div id="div_A11_2015_1_10_003" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_003,MT_ZTITLE,6&quot;)"><span title="이주배경인구">이주배경인구 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_003" style="display: block;"></ul></li><li id="A11_2015_1_10_30" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_30,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_30" src="images/tree/expandable-last.gif" alt="국내인구이동"> <div id="div_A11_2015_1_10_30" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_30,MT_ZTITLE,6&quot;)"><span title="국내인구이동">국내인구이동 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_30" style="display: block;"></ul></li><li id="A11_2015_1_10_40" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_40,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_40" src="images/tree/expandable-last.gif" alt="미혼모, 미혼부"> <div id="div_A11_2015_1_10_40" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_40,MT_ZTITLE,6&quot;)"><span title="미혼모, 미혼부">미혼모, 미혼부 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_40" style="display: block;"></ul></li><li id="A11_2015_1_10_001" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_001,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_001" src="images/tree/expandable-last.gif" alt="고령자"> <div id="div_A11_2015_1_10_001" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_001,MT_ZTITLE,6&quot;)"><span title="고령자">고령자 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_001" style="display: block;"></ul></li><li id="A11_2015_1_10_002" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_002,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_002" src="images/tree/expandable-last.gif" alt="장애인 인구"> <div id="div_A11_2015_1_10_002" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_002,MT_ZTITLE,6&quot;)"><span title="장애인 인구">장애인 인구 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_002" style="display: block;"></ul></li><li id="A11_2015_1_10_50" class="expandable lastExpandable"><a href="javascript:treeDownList(&quot;A11_2015_1_10_50,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_10_50" src="images/tree/expandable-last.gif" alt="성씨, 본관 (2015년)"> <div id="div_A11_2015_1_10_50" class="hitarea expandable-hitarea lastExpandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_10_50,MT_ZTITLE,6&quot;)"><span title="성씨, 본관 (2015년)">성씨, 본관 (2015년) </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_10"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_10_50" style="display: block;"></ul></li></ul></li><li id="A11_2015_1_001" class="collapsable"><a href="javascript:treeDownList(&quot;A11_2015_1_001,MT_ZTITLE,5&quot;)"><img id="img_A11_2015_1_001" src="images/tree/collapsable-last.gif" alt="표본(20%)부문 (2020년)"> <div id="div_A11_2015_1_001" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_001,MT_ZTITLE,5&quot;)"><span title="표본(20%)부문 (2020년)" style="">표본(20%)부문 (2020년) </span></a><input type="hidden" name="up_list_id" value="A11_2015_1"><input type="hidden" name="menu_level" value="5"><ul id="ul_A11_2015_1_001" style="display: block;"><li id="A11_2015_1_001_001" class="collapsable"><a href="javascript:treeDownList(&quot;A11_2015_1_001_001,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_001_001" src="images/tree/collapsable-last.gif" alt="표본기본표"> <div id="div_A11_2015_1_001_001" class="hitarea collapsable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_001_001,MT_ZTITLE,6&quot;)"><span title="표본기본표" style="">표본기본표 </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_001"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_001_001" style="display: block;"><li id="treeDown_DT_1PM2001"><img src="images/tree/icon_file.png" alt="성, 연령 및 교육정도, 교육상태별 인구(6세이상, 내국인)-시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2001&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성, 연령 및 교육정도, 교육상태별 인구(6세이상, 내국인)-시군구">성, 연령 및 교육정도, 교육상태별 인구(6세이상, 내국인)-시군구 (5년 2020~2020) </span></a></li><li id="treeDown_DT_1PM2002" style=""><img src="images/tree/icon_file.png" alt="연령별/성별/혼인상태별 인구(15세이상,내국인)-시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2002&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="연령별/성별/혼인상태별 인구(15세이상,내국인)-시군구" style="">연령별/성별/혼인상태별 인구(15세이상,내국인)-시군구 (5년 2020~2020) </span></a></li><li id="treeDown_DT_1PM2003"><img src="images/tree/icon_file.png" alt="성, 연령, 혼인상태 및 교육정도별 인구(15세 이상, 내국인)-시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2003&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성, 연령, 혼인상태 및 교육정도별 인구(15세 이상, 내국인)-시군구">성, 연령, 혼인상태 및 교육정도별 인구(15세 이상, 내국인)-시군구 (5년 2020~2020) </span></a></li><li id="treeDown_DT_1PM2004"><img src="images/tree/icon_file.png" alt="가구주와의 관계별/성별/혼인상태별 인구(일반가구)-시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2004&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="가구주와의 관계별/성별/혼인상태별 인구(일반가구)-시군구">가구주와의 관계별/성별/혼인상태별 인구(일반가구)-시군구 (5년 2020~2020) </span></a></li><li id="treeDown_DT_1PM2005"><img src="images/tree/icon_file.png" alt="성별/연령별/혼인상태별/세대구성별 인구(일반가구)-시군구"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2005&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성별/연령별/혼인상태별/세대구성별 인구(일반가구)-시군구">성별/연령별/혼인상태별/세대구성별 인구(일반가구)-시군구 (5년 2020~2020) </span></a></li><li id="treeDown_DT_1PM2006"><img src="images/tree/icon_file.png" alt="성별/연령별/교육정도별 인구(6세이상, 내국인)-동읍면"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2006&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성별/연령별/교육정도별 인구(6세이상, 내국인)-동읍면">성별/연령별/교육정도별 인구(6세이상, 내국인)-동읍면 (5년 2020~2020) </span></a></li><li id="treeDown_DT_1PM2007" class="last"><img src="images/tree/icon_file.png" alt="성별/연령별/혼인상태별 인구(15세이상, 내국인)-동읍면"> <a href="javascript:showStats(&quot;101&quot;,&quot;DT_1PM2007&quot;,&quot;N&quot;,&quot;A11_2015_1_001_001&quot;,&quot;MT_ZTITLE&quot;,&quot;&quot;)"><span class="statistics" title="성별/연령별/혼인상태별 인구(15세이상, 내국인)-동읍면">성별/연령별/혼인상태별 인구(15세이상, 내국인)-동읍면 (5년 2020~2020) </span></a></li></ul></li><li id="A11_2015_1_001_010" class="expandable"><a href="javascript:treeDownList(&quot;A11_2015_1_001_010,MT_ZTITLE,6&quot;)"><img id="img_A11_2015_1_001_010" src="images/tree/expandable-last.gif" alt="산업·직업(20%표본)"> <div id="div_A11_2015_1_001_010" class="hitarea expandable-hitarea"></div></a><a href="javascript:treeDownList(&quot;A11_2015_1_001_010,MT_ZTITLE,6&quot;)"><span title="산업·직업(20%표본)">산업·직업(20%표본) </span></a><input type="hidden" name="up_list_id" value="A11_2015_1_001"><input type="hidden" name="menu_level" value="6"><ul id="ul_A11_2015_1_001_010" style="display: block;"></ul></li></ul></li></ul></li></ul></li>
+						<li id="B,MT_ZTITLE,1" name="B" class="expandable"><div id="div_B" class="hitarea expandable-hitarea"></div><img id="img_B" onclick="treeDownList('B,MT_ZTITLE,1')" src="images/tree/expandable-last.gif" alt="사회일반" style="cursor: pointer;"><a href="javascript:treeDownList('B,MT_ZTITLE,1')"> <span title="사회일반">사회일반</span> </a><input type="hidden" name="up_list_id" value="B"><input type="hidden" name="menu_level" value="1"><ul id="ul_B" style="display: none;"></ul></li>
+						<li id="D,MT_ZTITLE,1" name="D" class="expandable"><div id="div_D" class="hitarea expandable-hitarea"></div><img id="img_D" onclick="treeDownList('D,MT_ZTITLE,1')" src="images/tree/expandable-last.gif" alt="노동" style="cursor: pointer;"><a href="javascript:treeDownList('D,MT_ZTITLE,1')"> <span title="노동">노동</span> </a><input type="hidden" name="up_list_id" value="D"><input type="hidden" name="menu_level" value="1"><ul id="ul_D" style="display: none;"></ul></li>
+						<li id="E,MT_ZTITLE,1" name="E" class="expandable"><div id="div_E" class="hitarea expandable-hitarea"></div><img id="img_E" onclick="treeDownList('E,MT_ZTITLE,1')" src="images/tree/expandable-last.gif" alt="소득ㆍ소비ㆍ자산" style="cursor: pointer;"><a href="javascript:treeDownList('E,MT_ZTITLE,1')"> <span title="소득ㆍ소비ㆍ자산">소득ㆍ소비ㆍ자산</span> </a><input type="hidden" name="up_list_id" value="E"><input type="hidden" name="menu_level" value="1"><ul id="ul_E" style="display: none;"></ul></li>
+						<li id="I1,MT_ZTITLE,1" name="I1" class="expandable"><div id="div_I1" class="hitarea expandable-hitarea"></div><img id="img_I1" onclick="treeDownList('I1,MT_ZTITLE,1')" src="images/tree/expandable-last.gif" alt="주거" style="cursor: pointer;"><a href="javascript:treeDownList('I1,MT_ZTITLE,1')"> <span title="주거">주거</span> </a><input type="hidden" name="up_list_id" value="I1"><input type="hidden" name="menu_level" value="1"><ul id="ul_I1" style="display: none;"></ul></li>
